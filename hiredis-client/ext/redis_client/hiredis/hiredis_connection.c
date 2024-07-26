@@ -738,28 +738,6 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
     }
 
     if (redis_reply == NULL) {
-        /* Write until the write buffer is drained */
-        while (!wdone) {
-            errno = 0;
-
-            if (hiredis_buffer_write_nogvl(connection->context, &wdone) == REDIS_ERR) {
-                return HIREDIS_FATAL_CONNECTION_ERROR; // Socket error
-            }
-
-            if (errno == EAGAIN) {
-                int writable = 0;
-
-                if (hiredis_wait_writable(connection->context->fd, &connection->write_timeout, &writable) < 0) {
-                    return HIREDIS_CLIENT_TIMEOUT;
-                }
-
-                if (!writable) {
-                    errno = EAGAIN;
-                    return HIREDIS_CLIENT_TIMEOUT;
-                }
-            }
-        }
-
         /* Read until there is a full reply */
         while (redis_reply == NULL) {
             errno = 0;
